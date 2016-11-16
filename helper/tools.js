@@ -3,6 +3,8 @@
  */
 var charset = require('superagent-charset');
 var request = require('superagent');
+var moment = require('moment');
+
 charset(request);
 
 var cookies_test = 'nforum[UTMPUSERID]=youngsc; nforum[UTMPKEY]=15687886; nforum[UTMPNUM]=2469; nforum[PASSWORD]=IJhz6CfE2BOKU2%2FK86pSPA%3D%3D';
@@ -41,4 +43,41 @@ exports.post = function (url, cookies, body, callback) {
     request.post(url).charset('gbk')
         .set(headers).send(body)
         .end(callback);
+}
+
+
+exports.str2time = function (t_str) {
+    if (t_str.indexOf(':') != -1) {
+        var myDate = new Date();
+        var time = moment(myDate).format('YYYY-MM-DD ') + t_str;
+        myDate = new Date(time);
+        return myDate.getTime();
+    }
+    else if (t_str.indexOf('-') != -1) {
+        var myDate = new Date(t_str);
+        return myDate.getTime();
+    }
+    else {
+        throw new error("time string is not legal");
+    }
+}
+
+exports.isNewArticles = function (start_time) {
+    var current_date = Date.now();
+    if (current_date - start_time <= 60 * 60 * 1000) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+exports.isHaveNewReplies = function (endtime) {
+    var current_date = Date.now();
+    if (current_date - endtime <= 60 * 60 * 1000) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }
