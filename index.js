@@ -4,8 +4,12 @@
 var cookies = require('./helper/cookies.js');
 var tools = require('./helper/tools.js');
 var logger = require('./helper/logger.js');
-var config = require('./config/config.js')
-var cheerio = require('cheerio')
+var config = require('./config/config.js');
+var cheerio = require('cheerio');
+var grabber = require('./helper/grabber');
+var dbhelper = require('./helper/dbHelper.js');
+
+var db = new dbhelper('youngsc_db', '114.55.150.46', 3306, 'ghhy', 'ghhy');
 
 var cookies;
 var delay = 100;
@@ -14,9 +18,6 @@ var _boardcursor = 0;
 var byr_url = 'https://bbs.byr.cn';
 var nb = false;
 var boards = new Array();
-
-var NewArticles = new Array();
-var NewReplies = new Array();
 
 function main() {
     if (process.argv.length > 2) {
@@ -27,25 +28,35 @@ function main() {
         if (argv.indexOf('-i') != -1) {
 
         }
-        if (argv.indexOf('-d' != -1))
+        if (argv.indexOf('-d') != -1) {
             logger.enabledebug();
-        if (argv.indexOf('-nb') != -1)
+        }
+        if (argv.indexOf('-nb') != -1) {
             nb = true;
+        }
     }
 
+    db.insertRecords();
     if (!nb) {
         //为了获取cookies登陆一次即可，频繁post表达是没有必要的
         cookies.getCookies(function (_cookies) {
             cookies = _cookies;
+            tools.saveToFiles(_cookies, './bin/cookies.dat');
             getBoards(config.start_url);
         });
     }
     else {
-        //TODO:read board information and cookies from a file
-        for (var i = 0; i < threadnum; i++) {
-            getArticles(boards, i);
-        }
+        tools.readFromFiles('./bin/cookies.dat', function (_cookies) {
+            cookies = _cookies;
+            tools.readFromFiles('./bin/boards.dat', function (boards) {
+                for (var i = 0; i < threadnum; i++) {
+                    getArticles(boards, i);
+                }
+            });
+        });
     }
+
+    setTimeout(main,30*60*1000);
 }
 
 function getBoards(url) {
@@ -56,6 +67,9 @@ function getBoards(url) {
             }
             parseHtml(res.text, '/board/\\w+', function (_boards) {
                 boards = boards.concat(_boards);
+                if (!nb) {
+                    tools.saveToFiles(_boards);
+                }
                 for (var i = 0; i < threadnum; i++) {
                     getArticles(boards, i);
                 }
@@ -67,6 +81,9 @@ function getBoards(url) {
 function getBoardsbySection(url) {
     parseHtml(res.text, '/board/\\w+', function (_boards) {
         boards = boards.concat(_boards);
+        if (!nb) {
+            tools.saveToFiles(_boards);
+        }
     });
 }
 
@@ -81,8 +98,8 @@ function getArticles(boards, i) {
             logger.erro(err);
             return;
         }
-        parseTableTag(res.text, function (list) { //'/article/\\w+/\\d+'
-            //TODO:Grab new replies
+        parseTableTag(res.text, function () { //'/article/\\w+/\\d+'
+
             setTimeout(function () {
                 getArticles(boards, i);
             }, delay);
@@ -114,7 +131,6 @@ function parseHtml(html, regExp, callback) {
 
 //parse html and get all article information include content,time and so on
 function parseTableTag(html, callback) {
-    var list = new Array();
     $ = cheerio.load(html);
     $('tbody tr', 'table[class="board-list tiz"]').each(function (index, element) {
         var current_tr = $(element);
@@ -131,14 +147,19 @@ function parseTableTag(html, callback) {
         var last_reply_time = tools.str2time(last_reply_time_str);
 
         if (tools.isNewArticles(start_time)) {
-            logger.log("目标URL:" + grab_url);
-            list.push(grab_url);
+            logger.debug("目标URL:" + grab_url);
+            grabber.GrabReplies(grab_url, cookies, function (bbsdynamic) {
+                db.insertDynamic(bbsdynamic);
+            });
         } else if (tools.isHaveNewReplies(last_reply_time)) {
-            logger.log("目标URL:" + grab_url);
-            list.push(grab_url);
+            logger.debug("目标URL:" + grab_url);
+            grab_url = grab_url.substr(0, grab_url.indexOf('#'));
+            grabber.GrabReplies(grab_url, cookies, function (bbsdynamic) {
+                db.insertDynamic(bbsdynamic);
+            });
         }
     });
-    callback(list);
+    callback();
 }
 
 function getcursor() {

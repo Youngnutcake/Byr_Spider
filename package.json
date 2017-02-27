@@ -1,0 +1,20 @@
+{
+  "name": "bupt-spider",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "debug": "~2.2.0",
+    "iconv-lite": "^0.4.13",
+    "moment": "^2.15.2",
+    "morgan": "~1.7.0",
+    "mysql": "^2.12.0",
+    "node-uuid": "^1.4.7",
+    "superagent": "^2.3.0",
+    "superagent-charset": "^1.1.1",
+    "uuid": "^3.0.1"
+  }
+}

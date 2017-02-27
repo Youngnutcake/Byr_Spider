@@ -1,6 +1,7 @@
 /**
  * Created by youngsc on 2016/11/5.
  */
+var fs=require('fs');
 var charset = require('superagent-charset');
 var request = require('superagent');
 var moment = require('moment');
@@ -64,7 +65,7 @@ exports.str2time = function (t_str) {
 
 exports.isNewArticles = function (start_time) {
     var current_date = Date.now();
-    if (current_date - start_time <= 60 * 60 * 1000) {
+    if (current_date - start_time <= 30 * 60 * 1000) {
         return true;
     }
     else {
@@ -74,10 +75,29 @@ exports.isNewArticles = function (start_time) {
 
 exports.isHaveNewReplies = function (endtime) {
     var current_date = Date.now();
-    if (current_date - endtime <= 60 * 60 * 1000) {
+    if (current_date - endtime <= 30 * 60 * 1000) {
         return true;
     }
     else {
         return false;
     }
+}
+
+exports.saveToFiles=function(data,path)
+{
+    path=path||'./bin/boards.dat'
+    fs.writeFile(path,data,function (err) {
+        if (err){
+            throw err ;
+        }
+    }) ;
+}
+
+exports.readFromFiles=function(path,callback)
+{
+    path=path||'./bin/boards.dat';
+    fs.readFile(path,"utf8",function (error,data){
+        if(error) throw error ;
+        callback(data.split(','));
+    }) ;
 }
