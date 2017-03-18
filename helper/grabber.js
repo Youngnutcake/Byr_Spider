@@ -6,11 +6,11 @@ var cheerio = require('cheerio');
 var dynamic = require('../entity/bbsDynamic')
 var logger = require('./logger')
 
-var time_pattern = /\((\w{3} \w{3}.{1,2}\d{1,2} \d{2}:\d{2}:\d{2} \d{4})\)/;
+var time_pattern = /\((\w{3} \w{3}\s{1,2}\d{1,2} \d{2}:\d{2}:\d{2} \d{4})\)/;
 var abstract_pattern = /(站内|转信)(.+)--/;
 var get_page_parttern = /\?p=(\d+)/;
 
-var change_time_parttern = /(\w{3}) (\w{3}).{1,2}(\d{1,2}) (.{8}) (\d{4})/;
+var change_time_parttern = /(\w{3}) (\w{3})\s{1,2}(\d{1,2}) (.{8}) (\d{4})/;
 
 exports.GrabReplies = function GrabReplies(url, cookies, callback) {
     var url = url.split('#a')[0];
@@ -48,8 +48,12 @@ function GrabOnePageReplies(html, target_url, callback) {
     $ = cheerio.load(html);
     try {
         var temp = $('span[class="n-left"]').text();
-        var theme = $('span[class="n-left"]').text().split(':')[1].trim();
-
+        try{
+            var theme = $('span[class="n-left"]').text().split(':')[1].trim();
+        }
+        catch (err){
+            logger.log(err+'   '+html)
+        }
     }
     catch (err) {
         logger.erro(err + '\n' + temp);
@@ -66,6 +70,7 @@ function GrabOnePageReplies(html, target_url, callback) {
         var time = ParseTime(time_str);
 
         if (tools.isHaveNewReplies(new Date(time).getTime())) {
+            logger.log('grabber.js  there is a new reply')
             var bbsdynamic = new dynamic(username, action, theme, time, abstract, url);
             logger.debug(bbsdynamic);
             if (callback) {
