@@ -42,7 +42,12 @@ function main() {
         cookies.getCookies(function (_cookies) {
             cookies = _cookies;
             tools.saveToFiles(_cookies, './bin/cookies.dat');
-            getBoards(config.start_url);
+            //getBoards(config.start_url);
+            tools.readFromFiles('./bin/boards.dat', function (boards) {
+                for (var i = 0; i < threadnum; i++) {
+                    getArticles(boards, i);
+                }
+            });
         });
     }
     else {
@@ -135,8 +140,13 @@ function parseTableTag(html, callback) {
     $('tbody tr', 'table[class="board-list tiz"]').each(function (index, element) {
         var current_tr = $(element);
         var theme = current_tr.children().eq(1).text();
-        var start_time_str = current_tr.children().eq(2).text().trim();
-        var last_reply_time_str = current_tr.children().eq(5).find('a').text().trim();
+        try{
+            var start_time_str = current_tr.children().eq(2).text().trim();
+            var last_reply_time_str = current_tr.children().eq(5).find('a').text().trim();
+        }
+        catch(err){
+            logger.log('this is index.js 143,'+current_tr.children().eq(2).text()+','+err)
+        }
         var grab_url = byr_url + current_tr.children().eq(5).find('a').attr('href');
 
         logger.debug(current_tr.children().eq(1).text());                                  //文章主题
@@ -147,12 +157,12 @@ function parseTableTag(html, callback) {
         var last_reply_time = tools.str2time(last_reply_time_str);
 
         if (tools.isNewArticles(start_time)) {
-            logger.debug("目标URL:" + grab_url);
+            logger.debug("目标新文章URL:" + grab_url);
             grabber.GrabReplies(grab_url, cookies, function (bbsdynamic) {
                 db.insertDynamic(bbsdynamic);
             });
         } else if (tools.isHaveNewReplies(last_reply_time)) {
-            logger.debug("目标URL:" + grab_url);
+            logger.debug("目标新回复URL:" + grab_url);
             grab_url = grab_url.substr(0, grab_url.indexOf('#'));
             grabber.GrabReplies(grab_url, cookies, function (bbsdynamic) {
                 db.insertDynamic(bbsdynamic);
